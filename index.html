@@ -1,102 +1,2540 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <title>マイク録音・GAS送信アプリ</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; text-align: center; }
-        button { font-size: 1.2rem; padding: 10px 20px; margin: 10px; cursor: pointer; }
-        #status { margin-top: 20px; color: #555; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Discord Clone</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* Reset & CSS Variables */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', 'gg sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
+    }
+    
+    :root {
+      --bg-servers: #1e1f22;
+      --bg-sidebar: #2b2d31;
+      --bg-chat: #313338;
+      --bg-chat-input: #383a40;
+      --bg-profile: #232428;
+      --text-normal: #dbdee1;
+      --text-muted: #949ba4;
+      --text-link: #00a8fc;
+      --brand: #5865f2;
+      --brand-hover: #4752c4;
+      --green: #23a55a;
+      --yellow: #f0b232;
+      --red: #f23f43;
+      --grey: #80848e;
+      --border-color: #3f4147;
+      --scrollbar-thumb: #1a1b1e;
+      --scrollbar-track: #2e3035;
+    }
+
+    body {
+      background-color: var(--bg-chat);
+      color: var(--text-normal);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #111214;
+    }
+
+    /* Core Layout */
+    #app-container {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Server Sidebar */
+    .server-sidebar {
+      width: 72px;
+      background-color: var(--bg-servers);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 12px;
+      gap: 8px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .server-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background-color: #313338;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      position: relative;
+      color: var(--text-normal);
+      font-weight: 600;
+      font-size: 16px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .server-btn:hover {
+      border-radius: 30%;
+      background-color: var(--brand);
+      color: white;
+    }
+
+    .server-btn.active {
+      border-radius: 30%;
+      background-color: var(--brand);
+      color: white;
+    }
+
+    .server-btn::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      width: 8px;
+      height: 0px;
+      border-radius: 0 4px 4px 0;
+      background-color: white;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .server-btn:hover::before {
+      height: 20px;
+    }
+
+    .server-btn.active::before {
+      height: 40px;
+    }
+
+    .server-separator {
+      width: 32px;
+      height: 2px;
+      background-color: #35363c;
+      margin: 4px 0;
+      border-radius: 1px;
+    }
+
+    .server-action-btn {
+      background-color: #313338;
+      color: var(--green);
+    }
+
+    .server-action-btn:hover {
+      background-color: var(--green);
+      color: white;
+      border-radius: 30%;
+    }
+
+    /* Channel/Navigation Sidebar */
+    .nav-sidebar {
+      width: 240px;
+      background-color: var(--bg-sidebar);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      z-index: 5;
+    }
+
+    .server-header {
+      height: 48px;
+      border-bottom: 1px solid #1f2023;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+
+    .server-header:hover {
+      background-color: rgba(255,255,255,0.03);
+    }
+
+    .channels-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 8px;
+    }
+
+    .channel-category {
+      margin-top: 16px;
+    }
+
+    .channel-category-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .channel-category-header:hover {
+      color: var(--text-normal);
+    }
+
+    .channel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 4px;
+    }
+
+    .channel-item {
+      height: 34px;
+      padding: 0 8px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background-color 0.1s, color 0.1s;
+      gap: 6px;
+    }
+
+    .channel-item:hover {
+      background-color: rgba(255,255,255,0.05);
+      color: var(--text-normal);
+    }
+
+    .channel-item.active {
+      background-color: rgba(255,255,255,0.1);
+      color: var(--text-normal);
+    }
+
+    .channel-name {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    /* Voice Channel Active Users */
+    .voice-channel-users {
+      margin-left: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 4px;
+    }
+
+    .voice-user {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      border-radius: 4px;
+    }
+
+    .voice-user:hover {
+      background-color: rgba(255,255,255,0.03);
+    }
+
+    .voice-user img {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: #444;
+      object-fit: cover;
+    }
+
+    .voice-user-name {
+      font-size: 13px;
+      color: var(--text-normal);
+      flex: 1;
+    }
+
+    .speaking-indicator {
+      box-shadow: 0 0 0 2px var(--green);
+    }
+
+    /* Connection Panel (Voice Status) */
+    .voice-connection-panel {
+      background-color: #232428;
+      padding: 8px;
+      border-bottom: 1px solid var(--border-color);
+      display: none; /* Show only when connected */
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .voice-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .voice-status-green {
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .voice-channel-info {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .voice-actions {
+      display: flex;
+      justify-content: space-around;
+      gap: 4px;
+    }
+
+    .voice-action-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text-normal);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 0;
+      border-radius: 4px;
+      background-color: #2b2d31;
+    }
+
+    .voice-action-btn:hover {
+      background-color: #3f4147;
+    }
+
+    .voice-action-btn.active {
+      color: var(--red);
+    }
+
+    /* User Profile Footer */
+    .user-profile-footer {
+      height: 52px;
+      background-color: var(--bg-profile);
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .user-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+
+    .user-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background-color: #4f545c;
+      object-fit: cover;
+    }
+
+    .status-dot {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-profile);
+    }
+
+    .status-online { background-color: var(--green); }
+    .status-idle { background-color: var(--yellow); }
+    .status-dnd { background-color: var(--red); }
+    .status-offline { background-color: var(--grey); }
+
+    .user-info-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .display-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-normal);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .custom-status-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .profile-controls {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .control-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-normal);
+      cursor: pointer;
+    }
+
+    .control-btn:hover {
+      background-color: rgba(255,255,255,0.05);
+    }
+
+    /* Main Chat Section */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background-color: var(--bg-chat);
+      min-width: 0;
+    }
+
+    .chat-header {
+      height: 48px;
+      border-bottom: 1px solid #1f2023;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .chat-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .chat-header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: var(--text-normal);
+    }
+
+    /* Message Area */
+    .messages-viewport {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message-item {
+      display: flex;
+      gap: 16px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .message-item:hover {
+      background-color: rgba(255,255,255,0.02);
+    }
+
+    .message-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #5865f2;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .message-content-wrapper {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .message-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .message-sender {
+      font-weight: 500;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .message-sender:hover {
+      text-decoration: underline;
+    }
+
+    .message-timestamp {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .message-text {
+      font-size: 15px;
+      color: var(--text-normal);
+      line-height: 1.4;
+      word-wrap: break-word;
+      user-select: text;
+    }
+
+    /* Message Options Menu on Hover */
+    .message-options {
+      position: absolute;
+      right: 16px;
+      top: -10px;
+      background-color: var(--bg-sidebar);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      display: none;
+      gap: 4px;
+      padding: 2px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+
+    .message-item:hover .message-options {
+      display: flex;
+    }
+
+    .message-opt-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .message-opt-btn:hover {
+      background-color: rgba(255,255,255,0.05);
+      color: var(--text-normal);
+    }
+
+    /* Chat Input */
+    .chat-input-container {
+      padding: 0 16px 24px 16px;
+      flex-shrink: 0;
+    }
+
+    .chat-input-wrapper {
+      background-color: var(--bg-chat-input);
+      border-radius: 8px;
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .chat-input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .input-attachment-btn {
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .input-attachment-btn:hover {
+      color: var(--text-normal);
+    }
+
+    .message-textarea {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text-normal);
+      font-size: 15px;
+      resize: none;
+      height: 22px;
+      max-height: 200px;
+    }
+
+    .message-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .input-emoji-btn {
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .input-emoji-btn:hover {
+      color: var(--text-normal);
+    }
+
+    /* Typing indicators */
+    .typing-indicator-container {
+      font-size: 12px;
+      color: var(--text-muted);
+      height: 18px;
+      margin-top: 4px;
+      padding-left: 4px;
+    }
+
+    /* Members Sidebar */
+    .members-sidebar {
+      width: 240px;
+      background-color: var(--bg-sidebar);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      border-left: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .members-viewport {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .member-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .member-group-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.1s;
+    }
+
+    .member-item:hover {
+      background-color: rgba(255,255,255,0.05);
+    }
+
+    .member-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .member-item:hover .member-name {
+      color: var(--text-normal);
+    }
+
+    .member-item.online .member-name {
+      color: var(--text-normal);
+    }
+
+    /* Modals & Overlays */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+      background-color: var(--bg-chat);
+      border-radius: 8px;
+      width: 440px;
+      padding: 28px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      border: 1px solid var(--border-color);
+      animation: modalFadeIn 0.3s ease;
+    }
+
+    @keyframes modalFadeIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .modal-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input {
+      background-color: #1e1f22;
+      border: 1px solid rgba(0,0,0,0.3);
+      padding: 10px;
+      border-radius: 4px;
+      color: var(--text-normal);
+      font-size: 15px;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--brand);
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: background-color 0.2s;
+    }
+
+    .btn-brand {
+      background-color: var(--brand);
+      color: white;
+    }
+
+    .btn-brand:hover {
+      background-color: var(--brand-hover);
+    }
+
+    .btn-ghost {
+      background: none;
+      color: var(--text-normal);
+    }
+
+    .btn-ghost:hover {
+      text-decoration: underline;
+    }
+
+    .btn-success {
+      background-color: var(--green);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background-color: #1a8a47;
+    }
+
+    /* Auth Onboarding Overlay */
+    #auth-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-servers);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+    }
+
+    .auth-card {
+      background-color: var(--bg-chat);
+      border-radius: 8px;
+      width: 480px;
+      padding: 32px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .google-signin-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background-color: white;
+      color: #3c4043;
+      font-weight: 600;
+      border: 1px solid #dadce0;
+      margin-top: 12px;
+    }
+
+    .google-signin-btn:hover {
+      background-color: #f7f9fa;
+    }
+
+    /* Settings Modal Styles */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  </style>
 </head>
 <body>
 
-    <h1>マイク録音テスト</h1>
-    <button id="startBtn">録音開始</button>
-    <button id="stopBtn" disabled>録音停止・送信</button>
+  <div id="auth-overlay">
+    <div class="auth-card">
+      <div class="modal-title">Discordへようこそ</div>
+      <div class="modal-desc">チャットを始めるために匿名アカウントを作成するか、Googleでサインインしてください。</div>
+      <div id="auth-status-banner" style="background-color: var(--red); color: white; padding: 10px; border-radius: 4px; font-size: 13px; margin-bottom: 16px; display: none; line-height: 1.4; word-break: break-all;"></div>
+      
+      <div class="form-group">
+        <label class="form-label">表示名 (ニックネーム)</label>
+        <input type="text" id="auth-username" class="form-input" placeholder="ゲストユーザー">
+      </div>
+
+      <button id="btn-anon-login" class="btn btn-brand" style="margin-bottom: 12px;">ゲストとして入室（匿名認証）</button>
+      
+      <div style="display: flex; align-items: center; justify-content: center; margin: 8px 0; color: var(--text-muted); font-size: 13px;">
+        <hr style="flex: 1; border: none; border-top: 1px solid var(--border-color); margin-right: 10px;">
+        または
+        <hr style="flex: 1; border: none; border-top: 1px solid var(--border-color); margin-left: 10px;">
+      </div>
+
+      <button id="btn-google-login" class="btn google-signin-btn">
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.8 2.71v2.24h2.91c1.7-1.56 2.69-3.86 2.69-6.58z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.2l-2.91-2.24c-.8.54-1.84.87-3.05.87-2.35 0-4.33-1.58-5.04-3.71H.93v2.3C2.42 16.02 5.48 18 9 18z"/>
+          <path fill="#FBBC05" d="M3.96 10.72c-.18-.54-.28-1.12-.28-1.72s.1-1.18.28-1.72V5H.93C.34 6.2 0 7.56 0 9s.34 2.8 1.93 4v-2.28z"/>
+          <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35L15 2.1C13.46.66 11.42 0 9 0 5.48 0 2.42 1.98.93 4.97l3.03 2.3c.71-2.13 2.69-3.71 5.04-3.71z"/>
+        </svg>
+        Googleでサインイン
+      </button>
+    </div>
+  </div>
+
+  <div id="app-container">
     
-    <div id="status">ボタンを押して録音を開始してください。</div>
+    <div class="server-sidebar" id="server-list">
+      <div class="server-btn active" id="btn-home-server" style="background-color: var(--brand);">
+        <i data-lucide="message-square"></i>
+      </div>
+      <div class="server-separator"></div>
+      
+      <div class="server-btn server-action-btn" id="btn-add-server" title="サーバーを作成または追加">
+        <i data-lucide="plus"></i>
+      </div>
+    </div>
 
-    <script>
-        // ⚠️ あなたのGASの「ウェブアプリURL」に書き換えてください
-        const GAS_WEBAPP_URL = "https://script.google.com/macros/s/XXXXX/exec";
+    <div class="nav-sidebar">
+      <div class="server-header" id="active-server-name">
+        <span>サーバー名</span>
+        <i data-lucide="chevron-down"></i>
+      </div>
+      
+      <div class="channels-container">
+        <div class="channel-category">
+          <div class="channel-category-header" id="category-text">
+            <span>テキストチャンネル</span>
+            <i data-lucide="plus" style="width: 14px; height: 14px;" id="btn-create-text-channel"></i>
+          </div>
+          <div class="channel-list" id="text-channel-list">
+            </div>
+        </div>
 
-        let mediaRecorder;
-        let audioChunks = [];
+        <div class="channel-category">
+          <div class="channel-category-header" id="category-voice">
+            <span>ボイスチャンネル</span>
+            <i data-lucide="plus" style="width: 14px; height: 14px;" id="btn-create-voice-channel"></i>
+          </div>
+          <div class="channel-list" id="voice-channel-list">
+            </div>
+        </div>
+      </div>
 
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const statusDiv = document.getElementById('status');
+      <div class="voice-connection-panel" id="voice-connection-panel">
+        <div class="voice-info">
+          <div class="voice-status-green">
+            <i data-lucide="phone-call" style="width: 16px; height: 16px;"></i>
+            <span>音声接続中</span>
+          </div>
+          <span class="voice-channel-info" id="active-voice-channel-name">/ 一般</span>
+        </div>
+        <div class="voice-actions">
+          <button class="voice-action-btn" id="btn-voice-mute" title="マイクのミュート">
+            <i data-lucide="mic"></i>
+          </button>
+          <button class="voice-action-btn" id="btn-voice-deafen" title="スピーカーのミュート">
+            <i data-lucide="headphones"></i>
+          </button>
+          <button class="voice-action-btn" id="btn-voice-disconnect" style="color: var(--red);" title="切断">
+            <i data-lucide="phone-off"></i>
+          </button>
+        </div>
+      </div>
 
-        // 録音開始
-        startBtn.addEventListener('click', async () => {
-            try {
-                // 🛠️ GAS外なので、ここで確実にマイク許可ダイアログが出ます
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
+      <div class="user-profile-footer">
+        <div class="user-meta" id="btn-my-profile">
+          <div class="avatar-wrapper">
+            <img class="user-avatar" id="my-avatar" src="" alt="Avatar">
+            <div class="status-dot status-online" id="my-status-dot"></div>
+          </div>
+          <div class="user-info-text">
+            <span class="display-name" id="my-display-name">ユーザー名</span>
+            <span class="custom-status-text" id="my-custom-status">オンライン</span>
+          </div>
+        </div>
+        <div class="profile-controls">
+          <div class="control-btn" id="btn-settings" title="ユーザー設定">
+            <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
 
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <i data-lucide="hash" id="active-channel-hash-icon" style="color: var(--text-muted);"></i>
+          <span id="active-channel-title">general</span>
+        </div>
+        <div class="chat-header-right">
+          <button class="btn btn-brand" id="btn-get-invite" style="padding: 6px 12px; font-size: 12px; display: none;">
+            メンバーを招待
+          </button>
+        </div>
+      </div>
 
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    statusDiv.innerText = "GASへ音声を送信中...";
-                    
-                    // BlobをBase64に変換してGASに送る
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = async () => {
-                        const base64Audio = reader.result.split(',')[1];
-                        await sendToGAS(base64Audio);
-                    };
-                };
+      <div class="messages-viewport" id="messages-list">
+        </div>
 
-                mediaRecorder.start();
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                statusDiv.innerText = "録音中...";
-            } catch (err) {
-                console.error("マイクの起動に失敗:", err);
-                statusDiv.innerText = "マイクの許可が得られませんでした。";
+      <div class="chat-input-container">
+        <div class="chat-input-wrapper">
+          <div class="chat-input-row">
+            <div class="input-attachment-btn" id="btn-attach" title="ファイルを添付">
+              <i data-lucide="plus-circle"></i>
+            </div>
+            <input type="file" id="file-input-attach" style="display:none;">
+            <textarea class="message-textarea" id="message-input" placeholder="#general へのメッセージ" rows="1"></textarea>
+            <div class="input-emoji-btn" id="btn-emoji">
+              <i data-lucide="smile"></i>
+            </div>
+          </div>
+        </div>
+        <div class="typing-indicator-container" id="typing-indicators">
+          </div>
+      </div>
+    </div>
+
+    <div class="members-sidebar" id="members-sidebar">
+      <div class="members-viewport">
+        <div class="member-group" id="group-online">
+          <div class="member-group-title" id="online-count-title">オンライン — 0</div>
+          <div id="members-list-online"></div>
+        </div>
+        <div class="member-group" id="group-offline" style="margin-top: 12px;">
+          <div class="member-group-title" id="offline-count-title">オフライン — 0</div>
+          <div id="members-list-offline"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="modal-overlay" id="modal-server">
+    <div class="modal-content">
+      <div class="modal-title">サーバーの作成と参加</div>
+      <div class="modal-desc">新しいサーバーを作成するか、既存の招待コードを入力して参加します。</div>
+      
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="border: 1px solid var(--border-color); padding: 16px; border-radius: 6px;">
+          <div class="form-label" style="margin-bottom: 8px;">サーバーを新規作成</div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <input type="text" id="server-create-name" class="form-input" placeholder="マイサーバー名">
+          </div>
+          <button class="btn btn-brand" id="btn-modal-create-server" style="width: 100%;">作成する</button>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px;">または</div>
+
+        <div style="border: 1px solid var(--border-color); padding: 16px; border-radius: 6px;">
+          <div class="form-label" style="margin-bottom: 8px;">招待コードでサーバーに参加</div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <input type="text" id="server-join-code" class="form-input" placeholder="例: A1B2C3D4">
+          </div>
+          <button class="btn btn-success" id="btn-modal-join-server" style="width: 100%;">サーバーに参加</button>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn btn-ghost" id="btn-close-server-modal">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-settings">
+    <div class="modal-content" style="width: 480px;">
+      <div class="modal-title">ユーザー設定</div>
+      <div class="modal-desc">プロフィールの編集やGoogleアカウントの連携を行います。</div>
+      
+      <div class="settings-grid">
+        <div class="form-group">
+          <label class="form-label">ニックネーム</label>
+          <input type="text" id="settings-display-name" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">アバター画像</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="file" id="settings-avatar-file" style="display:none;" accept="image/*">
+            <button class="btn btn-brand" id="btn-upload-avatar" type="button" style="padding: 8px 12px; font-size: 13px;">画像をアップロード</button>
+            <span id="settings-avatar-filename" style="font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">選択されていません</span>
+          </div>
+          <input type="hidden" id="settings-avatar-url">
+        </div>
+        <div class="form-group">
+          <label class="form-label">カスタムステータス</label>
+          <input type="text" id="settings-custom-status" class="form-input" placeholder="ステータスを設定">
+        </div>
+        
+        <div style="margin-top: 12px;">
+          <label class="form-label">アカウント連携</label>
+          <div id="settings-auth-status" style="font-size: 13px; color: var(--text-muted); margin: 8px 0;"></div>
+          <button id="btn-settings-link-google" class="btn google-signin-btn" style="width: 100%; margin-top: 0;">
+            Googleアカウントを連携する
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-buttons" style="margin-top: 24px;">
+        <button class="btn btn-ghost" id="btn-settings-logout" style="color: var(--red); margin-right: auto;">ログアウト</button>
+        <button class="btn btn-ghost" id="btn-close-settings-modal">キャンセル</button>
+        <button class="btn btn-brand" id="btn-save-settings">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-channel">
+    <div class="modal-content">
+      <div class="modal-title">チャンネルの作成</div>
+      <div class="modal-desc" id="channel-modal-desc">新しいチャンネルを追加します。</div>
+      
+      <div class="form-group">
+        <label class="form-label">チャンネル名</label>
+        <input type="text" id="channel-create-name" class="form-input" placeholder="new-channel">
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn btn-ghost" id="btn-close-channel-modal">キャンセル</button>
+        <button class="btn btn-brand" id="btn-modal-create-channel">作成する</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="remote-audio-container" style="display:none;"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    // Global Error Logger for UI Debugging
+    window.addEventListener('error', (event) => {
+      showGlobalError('JS Error: ' + event.message + '\nFile: ' + event.filename + ':' + event.lineno);
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      showGlobalError('Unhandled Promise: ' + event.reason);
+    });
+
+    function showGlobalError(msg) {
+      console.error(msg);
+      let errDiv = document.getElementById('global-debug-error');
+      if (!errDiv) {
+        errDiv = document.createElement('div');
+        errDiv.id = 'global-debug-error';
+        errDiv.style.position = 'fixed';
+        errDiv.style.bottom = '10px';
+        errDiv.style.right = '10px';
+        errDiv.style.backgroundColor = 'rgba(242, 63, 67, 0.95)';
+        errDiv.style.color = 'white';
+        errDiv.style.padding = '12px';
+        errDiv.style.borderRadius = '6px';
+        errDiv.style.zIndex = '100000';
+        errDiv.style.fontFamily = 'monospace';
+        errDiv.style.fontSize = '11px';
+        errDiv.style.maxWidth = '350px';
+        errDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+        errDiv.style.whiteSpace = 'pre-wrap';
+        errDiv.innerHTML = '<strong>[Console Error Alert]</strong><hr style="margin:6px 0; border:none; border-top:1px solid rgba(255,255,255,0.3);"><div id="error-logs-container"></div>';
+        document.body.appendChild(errDiv);
+      }
+      const logs = document.getElementById('error-logs-container');
+      logs.innerHTML += '<div>・' + (msg) + '</div>';
+    }
+
+    // App State Configuration Variables
+    let CONFIG = {};
+    let db, auth, supabaseClient;
+    
+    // Active App State
+    let currentUser = null;
+    let currentServerId = null;
+    let currentChannelId = null;
+    let currentChannelType = 'text'; // 'text' or 'voice'
+    let currentServers = [];
+    let currentChannels = [];
+    let activeListeners = {}; // Stores Firebase db unsubscribers
+    
+    // Typing tracking
+    let typingTimeout = null;
+    
+    // Voice Connection & WebRTC mesh state
+    let localStream = null;
+    let peerConnections = {}; // Map of user_id -> RTCPeerConnection
+    let activeVoiceRoomId = null; // Channel ID
+    let isMuted = false;
+    let isDeafened = false;
+    
+    // Voice speech detection context
+    let audioContext = null;
+    let speechAnalyser = null;
+    let voiceInterval = null;
+
+    // Load configs from GAS and initialize application
+    window.addEventListener('DOMContentLoaded', () => {
+      // Setup Lucide icons initially
+      lucide.createIcons();
+
+      // ⚠️ ここにGASのデプロイURLを設定してください (末尾が /exec のURL)
+      const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxXrZRqMDij1iqvxNucUX3JWoW2b0bNxGoltqMab-7u0IwZn_rPSE3s6O7nYJUOYMU3gQ/exec";
+      
+      const fallbackConfigs = {
+        SUPABASE_URL: 'https://lghjenoutzkwyjyvfdau.supabase.co',
+        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnaGplbm91dHprd3lqeXZmZGF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0ODQyNzQsImV4cCI6MjA5NjA2MDI3NH0.9vu7TAD9WLXlg4B8J7oZNtasRboNKLTeMUGAuKDQyxI',
+        FIREBASE_API_KEY: 'AIzaSyB85TTe5-hkFBpmQqZ8zXRLSilsFUs7mnM',
+        FIREBASE_AUTH_DOMAIN: 'test-4bef2.firebaseapp.com',
+        FIREBASE_DATABASE_URL: 'https://test-4bef2-default-rtdb.asia-southeast1.firebasedatabase.app',
+        FIREBASE_PROJECT_ID: 'test-4bef2',
+        FIREBASE_STORAGE_BUCKET: 'test-4bef2.firebasestorage.app',
+        FIREBASE_MESSAGING_SENDER_ID: '844907408984',
+        FIREBASE_APP_ID: '1:844907408984:web:b9baeba32fef4665b4e42d'
+      };
+
+      async function loadConfigs() {
+        try {
+          // fetch API を使って GAS の doPost へアクセス
+          const response = await fetch(GAS_WEBAPP_URL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ 'action': 'getConfigs' })
+          });
+          
+          const result = await response.json();
+          if (result.status === 'success') {
+            const configs = result.data;
+            const finalConfigs = {};
+            for (let k in fallbackConfigs) {
+              finalConfigs[k] = (configs && configs[k] && !configs[k].includes('YOUR_')) ? configs[k] : fallbackConfigs[k];
             }
-        });
-
-        // 録音停止
-        stopBtn.addEventListener('click', () => {
-            mediaRecorder.stop();
-            // マイクのストリームを停止して終了
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-        });
-
-        // GASへのデータ送信処理
-        async function sendToGAS(base64Data) {
-            try {
-                const response = await fetch(GAS_WEBAPP_URL, {
-                    method: 'POST',
-                    mode: 'cors', // 💡 クロスドメイン通信を許可
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        'audio': base64Data
-                    })
-                });
-
-                const result = await response.json();
-                if (result.status === 'success') {
-                    statusDiv.innerText = "送信完了！ GAS側で正常に処理されました。";
-                } else {
-                    statusDiv.innerText = "エラー: " + result.message;
-                }
-            } catch (error) {
-                console.error("GAS送信エラー:", error);
-                statusDiv.innerText = "GASへの送信に失敗しました。";
-            }
+            initApp(finalConfigs);
+          } else {
+            console.error('GASの設定取得エラー:', result.message);
+            initApp(fallbackConfigs);
+          }
+        } catch (error) {
+          console.warn('GAS環境への接続に失敗しました。フォールバック設定を使用します。', error);
+          initApp(fallbackConfigs);
         }
-    </script>
+      }
+
+      loadConfigs();
+    });
+
+    // Initialize Firebase, Supabase, and Event Handlers
+    function initApp(configs) {
+      CONFIG = configs;
+      
+      // Initialize Firebase Compatibility SDK
+      const firebaseConfig = {
+        apiKey: CONFIG.FIREBASE_API_KEY,
+        authDomain: CONFIG.FIREBASE_AUTH_DOMAIN,
+        databaseURL: CONFIG.FIREBASE_DATABASE_URL,
+        projectId: CONFIG.FIREBASE_PROJECT_ID,
+        storageBucket: CONFIG.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: CONFIG.FIREBASE_MESSAGING_SENDER_ID,
+        appId: CONFIG.FIREBASE_APP_ID
+      };
+      
+      let firebaseError = null;
+      let supabaseError = null;
+
+      try {
+        if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes('YOUR_')) {
+          throw new Error('Firebase configuration key is missing or invalid.');
+        }
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.database();
+        auth = firebase.auth();
+      } catch (err) {
+        console.error('Firebase initialization failed:', err);
+        firebaseError = err.message;
+      }
+
+      // Initialize Supabase Client
+      try {
+        if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('YOUR_')) {
+          throw new Error('Supabase configuration URL is missing or invalid.');
+        }
+        if (typeof supabase === 'undefined') {
+          throw new Error('Supabase SDKがロードされていません。');
+        }
+        supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+      } catch (err) {
+        console.error('Supabase initialization failed:', err);
+        supabaseError = err.message;
+      }
+
+      // Display connection banner if error
+      if (firebaseError || supabaseError) {
+        const banner = document.getElementById('auth-status-banner');
+        if (banner) {
+          banner.style.display = 'block';
+          banner.innerHTML = `
+            <strong>初期化エラーが発生しました:</strong><br>
+            ${firebaseError ? `・Firebase: ${firebaseError}<br>` : ''}
+            ${supabaseError ? `・Supabase: ${supabaseError}` : ''}
+          `;
+        }
+      }
+
+      // Hook up UI Interactions
+      setupEventListeners();
+      
+      // Track Firebase Authentication State
+      if (auth) {
+        auth.onAuthStateChanged(async (user) => {
+          if (user) {
+            currentUser = user;
+            
+            try {
+              // Verify and create database profile inside Supabase
+              const profile = await checkAndCreateProfile(user);
+              currentUser.profile = profile;
+            } catch (pErr) {
+              console.error('Profile registration failed:', pErr);
+              // Fallback to local profile object if profiles table is missing
+              currentUser.profile = {
+                id: user.uid,
+                display_name: document.getElementById('auth-username').value.trim() || user.displayName || 'ゲスト-' + (user.uid.substring(0, 5)),
+                avatar_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=' + (user.uid),
+                custom_status: 'オンライン'
+              };
+            }
+            
+            // Hide landing overlay
+            document.getElementById('auth-overlay').style.opacity = '0';
+            setTimeout(() => {
+              document.getElementById('auth-overlay').style.display = 'none';
+            }, 500);
+
+            // Render local user footer details
+            updateUserFooter();
+            
+            // Setup presence listener
+            setupUserPresence(user.uid);
+            
+            // Load and select default Home Server / Direct Messages
+            loadServers();
+          } else {
+            // Show landing/login overlay
+            document.getElementById('auth-overlay').style.display = 'flex';
+            document.getElementById('auth-overlay').style.opacity = '1';
+          }
+        });
+      }
+    }
+
+    // --- Authentication Actions ---
+    
+    async function checkAndCreateProfile(user) {
+      if (!supabaseClient) {
+        throw new Error('Supabase client is not initialized.');
+      }
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', user.uid)
+        .single();
+        
+      if (error || !data) {
+        // Create new user profile inside Supabase
+        const dispName = document.getElementById('auth-username').value.trim() || user.displayName || 'ゲスト-' + (user.uid.substring(0, 5));
+        const defaultAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=' + (user.uid);
+        
+        const newProfile = {
+          id: user.uid,
+          display_name: dispName,
+          avatar_url: defaultAvatar,
+          custom_status: 'オンライン'
+        };
+        
+        await supabaseClient.from('profiles').insert([newProfile]);
+        return newProfile;
+      }
+      return data;
+    }
+
+    function setupUserPresence(userId) {
+      const userPresenceRef = db.ref('/presence/' + (userId));
+      const connectedRef = db.ref('.info/connected');
+      
+      connectedRef.on('value', (snap) => {
+        if (snap.val() === true) {
+          // When disconnecting, remove user presence
+          userPresenceRef.onDisconnect().set('offline');
+          userPresenceRef.set('online');
+        }
+      });
+    }
+
+    // --- Dynamic UI Event Handlers ---
+    
+    function setupEventListeners() {
+      // Login Buttons
+      document.getElementById('btn-anon-login').addEventListener('click', () => {
+        if (!auth) {
+          alert('Firebaseが初期化されていないため、ログインできません。API設定を確認してください。');
+          return;
+        }
+        auth.signInAnonymously().catch(err => {
+          console.error('Anonymous login failed:', err);
+          alert('ゲストログインに失敗しました: ' + err.message);
+        });
+      });
+
+      document.getElementById('btn-google-login').addEventListener('click', () => {
+        if (!auth) {
+          alert('Firebaseが初期化されていないため、ログインできません。API設定を確認してください。');
+          return;
+        }
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(err => {
+          console.error('Google Sign-in failed. Attempting redirection fallback.', err);
+          auth.signInWithRedirect(provider).catch(redirErr => {
+            alert('Googleサインインに失敗しました。匿名ログインを使用してください: ' + redirErr.message);
+          });
+        });
+      });
+
+      // Server CRUD Modals
+      document.getElementById('btn-add-server').addEventListener('click', () => {
+        openModal('modal-server');
+      });
+      document.getElementById('btn-close-server-modal').addEventListener('click', () => {
+        closeModal('modal-server');
+      });
+
+      // Actions on Server Creator Form
+      document.getElementById('btn-modal-create-server').addEventListener('click', createServer);
+      document.getElementById('btn-modal-join-server').addEventListener('click', joinServerByCode);
+
+      // Home/DM Selector button
+      document.getElementById('btn-home-server').addEventListener('click', selectHomeServer);
+
+      // User Settings Modal
+      document.getElementById('btn-settings').addEventListener('click', () => {
+        // Load settings values
+        document.getElementById('settings-display-name').value = currentUser.profile.display_name;
+        document.getElementById('settings-avatar-url').value = currentUser.profile.avatar_url || '';
+        document.getElementById('settings-avatar-filename').innerText = currentUser.profile.avatar_url ? '画像設定済み' : '選択されていません';
+        document.getElementById('settings-avatar-file').value = '';
+        document.getElementById('settings-custom-status').value = currentUser.profile.custom_status || '';
+        
+        const isAnon = currentUser.isAnonymous;
+        document.getElementById('settings-auth-status').innerText = isAnon ? 
+          '現在: ゲストアカウント (ログインしていません)' : 'Google連携済み: ' + (currentUser.email);
+        
+        document.getElementById('btn-settings-link-google').style.display = isAnon ? 'flex' : 'none';
+        
+        openModal('modal-settings');
+      });
+
+      document.getElementById('btn-close-settings-modal').addEventListener('click', () => {
+        closeModal('modal-settings');
+      });
+
+      document.getElementById('btn-save-settings').addEventListener('click', saveUserSettings);
+
+      document.getElementById('btn-settings-logout').addEventListener('click', () => {
+        auth.signOut();
+        closeModal('modal-settings');
+      });
+
+      document.getElementById('btn-settings-link-google').addEventListener('click', linkGoogleAccount);
+
+      // --- Supabase Storage Avatar File Upload Listener ---
+      document.getElementById('btn-upload-avatar').addEventListener('click', () => {
+        document.getElementById('settings-avatar-file').click();
+      });
+
+      document.getElementById('settings-avatar-file').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const filenameSpan = document.getElementById('settings-avatar-filename');
+        filenameSpan.innerText = 'アップロード中...';
+
+        try {
+          if (!supabaseClient) throw new Error('Supabase client is not initialized.');
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${currentUser.uid}_${Date.now()}.${fileExt}`;
+          const filePath = `avatars/${fileName}`;
+
+          const { data, error } = await supabaseClient.storage
+            .from('discord-clone')
+            .upload(filePath, file);
+
+          if (error) throw error;
+
+          const { data: { publicUrl } } = supabaseClient.storage
+            .from('discord-clone')
+            .getPublicUrl(filePath);
+
+          document.getElementById('settings-avatar-url').value = publicUrl;
+          filenameSpan.innerText = file.name;
+        } catch (err) {
+          console.error('Avatar upload failed:', err);
+          filenameSpan.innerText = 'エラーが発生しました';
+          alert('画像のアップロードに失敗しました: ' + err.message);
+        }
+      });
+
+      // --- Supabase Storage Chat Attachment Upload Listener ---
+      document.getElementById('btn-attach').addEventListener('click', () => {
+        document.getElementById('file-input-attach').click();
+      });
+
+      document.getElementById('file-input-attach').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file || !currentChannelId) return;
+
+        // Display "Uploading..." in message input placeholder temporarily
+        const input = document.getElementById('message-input');
+        const oldPlaceholder = input.placeholder;
+        input.placeholder = 'ファイルをアップロード中...';
+        input.disabled = true;
+
+        try {
+          if (!supabaseClient) throw new Error('Supabase client is not initialized.');
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+          const filePath = `attachments/${fileName}`;
+
+          const { data, error } = await supabaseClient.storage
+            .from('discord-clone')
+            .upload(filePath, file);
+
+          if (error) throw error;
+
+          const { data: { publicUrl } } = supabaseClient.storage
+            .from('discord-clone')
+            .getPublicUrl(filePath);
+
+          // Post a message to Firebase RTDB with fileUrl
+          const messageData = {
+            content: file.name,
+            senderId: currentUser.uid,
+            senderName: currentUser.profile.display_name,
+            avatarUrl: currentUser.profile.avatar_url,
+            fileUrl: publicUrl,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+          };
+
+          await db.ref('/messages/' + currentChannelId).push(messageData);
+
+        } catch (err) {
+          console.error('File upload failed:', err);
+          alert('ファイルのアップロードに失敗しました: ' + err.message);
+        } finally {
+          input.placeholder = oldPlaceholder;
+          input.disabled = false;
+          input.focus();
+          e.target.value = ''; // Reset input
+        }
+      });
+
+      // Channel Add Modals
+      document.getElementById('btn-create-text-channel').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openChannelCreatorModal('text');
+      });
+      document.getElementById('btn-create-voice-channel').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openChannelCreatorModal('voice');
+      });
+      document.getElementById('btn-close-channel-modal').addEventListener('click', () => {
+        closeModal('modal-channel');
+      });
+      document.getElementById('btn-modal-create-channel').addEventListener('click', createChannel);
+
+      // Message Input Controls
+      const messageInput = document.getElementById('message-input');
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        } else {
+          sendTypingStatus();
+        }
+      });
+
+      // Server Invite Link Button
+      document.getElementById('btn-get-invite').addEventListener('click', async () => {
+        if (!currentServerId) return;
+        if (!supabaseClient) return alert('Supabaseが初期化されていません。');
+        const { data, error } = await supabaseClient
+          .from('servers')
+          .select('invite_code')
+          .eq('id', currentServerId)
+          .single();
+        if (data && data.invite_code) {
+          navigator.clipboard.writeText(data.invite_code);
+          alert('招待コードをクリップボードにコピーしました: ' + (data.invite_code));
+        }
+      });
+
+      // Voice Panel Controllers
+      document.getElementById('btn-voice-mute').addEventListener('click', toggleMute);
+      document.getElementById('btn-voice-deafen').addEventListener('click', toggleDeafen);
+      document.getElementById('btn-voice-disconnect').addEventListener('click', disconnectVoiceChannel);
+    }
+
+    // Modal Helpers
+    function openModal(id) {
+      document.getElementById(id).style.display = 'flex';
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function updateUserFooter() {
+      if (!currentUser || !currentUser.profile) return;
+      document.getElementById('my-display-name').innerText = currentUser.profile.display_name;
+      document.getElementById('my-avatar').src = currentUser.profile.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + (currentUser.uid);
+      document.getElementById('my-custom-status').innerText = currentUser.profile.custom_status || 'オンライン';
+      
+      const statusDot = document.getElementById('my-status-dot');
+      statusDot.className = 'status-dot status-online'; // Active status
+    }
+
+    // Update settings details in profiles db
+    async function saveUserSettings() {
+      const displayName = document.getElementById('settings-display-name').value.trim();
+      const avatarUrl = document.getElementById('settings-avatar-url').value.trim();
+      const customStatus = document.getElementById('settings-custom-status').value.trim();
+      
+      if (!displayName) return alert('表示名を入力してください。');
+
+      const updates = {
+        display_name: displayName,
+        avatar_url: avatarUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + (currentUser.uid),
+        custom_status: customStatus
+      };
+
+      if (!supabaseClient) return alert('Supabaseが初期化されていません。');
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update(updates)
+        .eq('id', currentUser.uid);
+
+      if (error) {
+        console.error('Profile update failed:', error);
+        alert('プロフィールの更新に失敗しました。');
+      } else {
+        currentUser.profile = { ...currentUser.profile, ...updates };
+        updateUserFooter();
+        closeModal('modal-settings');
+        // Reload server members to update avatar in UI
+        if (currentServerId) loadServerMembers(currentServerId);
+      }
+    }
+
+    // Links Anonymous authentication session to full Google Account
+    function linkGoogleAccount() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      currentUser.linkWithPopup(provider)
+        .then(async (result) => {
+          currentUser = result.user;
+          // Refresh user details
+          const profile = await checkAndCreateProfile(currentUser);
+          currentUser.profile = profile;
+          updateUserFooter();
+          alert('Googleアカウントとの連携に成功しました！');
+          closeModal('modal-settings');
+        })
+        .catch(err => {
+          console.error('Account linking failed:', err);
+          alert('アカウントの連携に失敗しました: ' + err.message);
+        });
+    }
+
+    // --- Servers Database Operations ---
+    
+    async function loadServers() {
+      // Clean dynamic server elements
+      const listContainer = document.getElementById('server-list');
+      const actionButtons = Array.from(listContainer.querySelectorAll('.server-action-btn, .server-separator'));
+      
+      // Clean all existing servers
+      const btns = listContainer.querySelectorAll('.server-btn:not(#btn-home-server):not(#btn-add-server)');
+      btns.forEach(b => b.remove());
+
+      if (!supabaseClient) return console.warn('SupabaseClient is not initialized.');
+      // Fetch servers from Supabase database
+      const { data: servers, error } = await supabaseClient
+        .from('members')
+        .select('servers(*)')
+        .eq('user_id', currentUser.uid);
+
+      if (error) {
+        console.error('Error fetching servers:', error);
+        return;
+      }
+
+      currentServers = servers.map(s => s.servers).filter(Boolean);
+
+      // Append server elements to list container before action buttons
+      currentServers.forEach(server => {
+        const btn = document.createElement('div');
+        btn.className = 'server-btn';
+        btn.id = 'server-' + (server.id);
+        btn.title = server.name;
+        
+        if (server.icon_url) {
+          btn.style.backgroundImage = 'url(\'' + (server.icon_url) + '\')';
+          btn.innerText = '';
+        } else {
+          // Fallback text initials
+          btn.innerText = server.name.substring(0, 2);
+        }
+
+        btn.addEventListener('click', () => selectServer(server.id));
+        
+        // Insert before add server button
+        listContainer.insertBefore(btn, document.getElementById('btn-add-server'));
+      });
+      
+      lucide.createIcons();
+    }
+
+    async function createServer() {
+      const serverName = document.getElementById('server-create-name').value.trim();
+      if (!serverName) return alert('サーバー名を入力してください。');
+
+      // 1. Generate unique 8-character invite code
+      const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const defaultIcon = 'https://api.dicebear.com/7.x/initials/svg?seed=' + (encodeURIComponent(serverName));
+
+      if (!supabaseClient) return alert('Supabaseが初期化されていません。');
+      // 2. Insert Server Record into Supabase
+      const { data: server, error } = await supabaseClient
+        .from('servers')
+        .insert([{
+          name: serverName,
+          icon_url: defaultIcon,
+          owner_id: currentUser.uid,
+          invite_code: inviteCode
+        }])
+        .select()
+        .single();
+
+      if (error || !server) {
+        console.error('Create server failed:', error);
+        return alert('サーバーの作成に失敗しました。');
+      }
+
+      // 3. Insert Owner Membership
+      await supabaseClient.from('members').insert([{
+        server_id: server.id,
+        user_id: currentUser.uid,
+        role: 'owner'
+      }]);
+
+      // 4. Create default text channels
+      await supabaseClient.from('channels').insert([
+        { server_id: server.id, name: '一般-チャット', type: 'text' },
+        { server_id: server.id, name: '音声-一般', type: 'voice' }
+      ]);
+
+      // Clear input and reload
+      document.getElementById('server-create-name').value = '';
+      closeModal('modal-server');
+      
+      await loadServers();
+      selectServer(server.id);
+    }
+
+    async function joinServerByCode() {
+      const code = document.getElementById('server-join-code').value.trim().toUpperCase();
+      if (!code) return alert('招待コードを入力してください。');
+
+      if (!supabaseClient) return alert('Supabaseが初期化されていません。');
+      // 1. Resolve Server Details from Invite Code
+      const { data: server, error } = await supabaseClient
+        .from('servers')
+        .select('*')
+        .eq('invite_code', code)
+        .single();
+
+      if (error || !server) {
+        return alert('無効な招待コードです。');
+      }
+
+      // 2. Check if user is already a member
+      const { data: existing } = await supabaseClient
+        .from('members')
+        .select('*')
+        .eq('server_id', server.id)
+        .eq('user_id', currentUser.uid)
+        .single();
+
+      if (existing) {
+        closeModal('modal-server');
+        return selectServer(server.id);
+      }
+
+      // 3. Create member record
+      const { error: joinError } = await supabaseClient
+        .from('members')
+        .insert([{
+          server_id: server.id,
+          user_id: currentUser.uid,
+          role: 'member'
+        }]);
+
+      if (joinError) {
+        console.error('Join server failed:', joinError);
+        return alert('サーバーの参加に失敗しました。');
+      }
+
+      document.getElementById('server-join-code').value = '';
+      closeModal('modal-server');
+      
+      await loadServers();
+      selectServer(server.id);
+    }
+
+    // Set view to home/DM interface (Mock mode)
+    function selectHomeServer() {
+      // Clear active states
+      document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-home-server').classList.add('active');
+      
+      currentServerId = null;
+      document.getElementById('active-server-name').querySelector('span').innerText = 'ホーム / DM';
+      document.getElementById('btn-get-invite').style.display = 'none';
+      
+      // Load mock direct message channels
+      renderChannels([{ id: 'dm-welcome', name: 'お知らせ', type: 'text' }]);
+      selectChannel('dm-welcome', 'text');
+      
+      // Clear user lists
+      document.getElementById('members-list-online').innerHTML = '';
+      document.getElementById('members-list-offline').innerHTML = '';
+    }
+
+    async function selectServer(serverId) {
+      document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById('server-' + (serverId));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      currentServerId = serverId;
+
+      // Resolve server details
+      const server = currentServers.find(s => s.id === serverId);
+      if (server) {
+        document.getElementById('active-server-name').querySelector('span').innerText = server.name;
+        document.getElementById('btn-get-invite').style.display = 'block';
+      }
+
+      // Load channels of the server
+      await loadChannels(serverId);
+      
+      // Load and list server members
+      loadServerMembers(serverId);
+    }
+
+    // --- Channel Database Operations ---
+    
+    async function loadChannels(serverId) {
+      if (!supabaseClient) return;
+      const { data: channels, error } = await supabaseClient
+        .from('channels')
+        .select('*')
+        .eq('server_id', serverId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching channels:', error);
+        return;
+      }
+
+      currentChannels = channels;
+      renderChannels(channels);
+
+      // Auto-select first text channel
+      const textChan = channels.find(c => c.type === 'text');
+      if (textChan) {
+        selectChannel(textChan.id, 'text');
+      } else {
+        // Clear chat area
+        document.getElementById('messages-list').innerHTML = '';
+      }
+    }
+
+    function renderChannels(channels) {
+      const textList = document.getElementById('text-channel-list');
+      const voiceList = document.getElementById('voice-channel-list');
+      
+      textList.innerHTML = '';
+      voiceList.innerHTML = '';
+
+      channels.forEach(channel => {
+        const item = document.createElement('div');
+        item.className = 'channel-item';
+        item.id = 'channel-' + (channel.id);
+        
+        const iconName = channel.type === 'text' ? 'hash' : 'volume-2';
+        item.innerHTML = '\n          <i data-lucide="' + (iconName) + '" style="width: 16px; height: 16px; flex-shrink:0;"></i>\n          <span class="channel-name">' + (channel.name) + '</span>\n        ';
+
+        item.addEventListener('click', () => selectChannel(channel.id, channel.type));
+        
+        if (channel.type === 'text') {
+          textList.appendChild(item);
+        } else {
+          // Voice room container for active WebRTC peers
+          const usersDiv = document.createElement('div');
+          usersDiv.className = 'voice-channel-users';
+          usersDiv.id = 'voice-users-' + (channel.id);
+          
+          voiceList.appendChild(item);
+          voiceList.appendChild(usersDiv);
+        }
+      });
+
+      lucide.createIcons();
+    }
+
+    // Open channel creator wizard
+    function openChannelCreatorModal(type) {
+      if (!currentServerId) return;
+      currentChannelType = type;
+      document.getElementById('channel-modal-desc').innerText = (type === 'text' ? 'テキスト' : 'ボイス') + 'チャンネルを新規作成します。';
+      document.getElementById('channel-create-name').value = '';
+      openModal('modal-channel');
+    }
+
+    async function createChannel() {
+      const channelName = document.getElementById('channel-create-name').value.trim().toLowerCase();
+      if (!channelName) return alert('チャンネル名を入力してください。');
+
+      if (!supabaseClient) return alert('Supabaseが初期化されていません。');
+      const { data, error } = await supabaseClient
+        .from('channels')
+        .insert([{
+          server_id: currentServerId,
+          name: currentChannelType === 'text' ? channelName.replace(/\s+/g, '-') : channelName,
+          type: currentChannelType
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Channel creation failed:', error);
+        return alert('チャンネルの作成に失敗しました。');
+      }
+
+      closeModal('modal-channel');
+      await loadChannels(currentServerId);
+      
+      if (currentChannelType === 'text') {
+        selectChannel(data.id, 'text');
+      }
+    }
+
+    function selectChannel(channelId, type) {
+      if (type === 'text') {
+        // Handle message streams
+        document.querySelectorAll('#text-channel-list .channel-item').forEach(c => c.classList.remove('active'));
+        const activeItem = document.getElementById('channel-' + (channelId));
+        if (activeItem) activeItem.classList.add('active');
+
+        currentChannelId = channelId;
+        const chan = currentChannels.find(c => c.id === channelId) || { name: 'general' };
+        
+        document.getElementById('active-channel-title').innerText = chan.name;
+        document.getElementById('active-channel-hash-icon').style.display = 'block';
+        document.getElementById('message-input').placeholder = '#' + (chan.name) + ' へのメッセージ';
+
+        // Switch Firebase Message listeners
+        listenForMessages(channelId);
+      } else {
+        // Join Peer Voice Channel Room
+        joinVoiceChannel(channelId);
+      }
+    }
+
+    // --- Message Management Realtime Stream ---
+    
+    function listenForMessages(channelId) {
+      const messagesList = document.getElementById('messages-list');
+      messagesList.innerHTML = ''; // Reset UI
+
+      // Unsubscribe from previous updates
+      if (activeListeners['messages']) {
+        activeListeners['messages'].off();
+      }
+
+      const messagesRef = db.ref('/messages/' + (channelId));
+      activeListeners['messages'] = messagesRef;
+
+      // Listen for incoming messages
+      messagesRef.on('child_added', (snap) => {
+        const msg = snap.val();
+        renderMessageItem(snap.key, msg);
+        
+        // Scroll to bottom
+        messagesList.scrollTop = messagesList.scrollHeight;
+      });
+
+      // Typing indicators synchronization
+      listenForTyping(channelId);
+    }
+
+    function renderMessageItem(msgId, msg) {
+      const messagesList = document.getElementById('messages-list');
+      const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      const item = document.createElement('div');
+      item.className = 'message-item';
+      item.id = 'msg-' + (msgId);
+      
+      const defaultAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=' + (msg.senderId);
+      const senderAvatar = msg.avatarUrl || defaultAvatar;
+
+      const isOwner = msg.senderId === currentUser.uid;
+      const deleteBtn = isOwner ? `
+        <div class="message-opt-btn" onclick="deleteMessage('${msgId}')" title="削除">
+          <i data-lucide="trash" style="width: 15px; height: 15px;"></i>
+        </div>
+      ` : '';
+
+      // Check if there is an attachment
+      let attachmentHtml = '';
+      if (msg.fileUrl) {
+        const isImage = msg.fileUrl.match(/\.(jpeg|jpg|gif|png|webp)/i) || msg.fileUrl.includes('image');
+        if (isImage) {
+          attachmentHtml = `
+            <div style="margin-top: 8px;">
+              <img src="${msg.fileUrl}" style="max-width: 400px; max-height: 300px; border-radius: 8px; object-fit: contain; cursor: pointer;" onclick="window.open('${msg.fileUrl}', '_blank')">
+            </div>
+          `;
+        } else {
+          attachmentHtml = `
+            <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; padding: 10px; background-color: var(--bg-servers); border-radius: 6px; width: fit-content; border: 1px solid var(--border-color);">
+              <i data-lucide="file" style="width: 20px; height: 20px; color: var(--text-muted);"></i>
+              <a href="${msg.fileUrl}" target="_blank" style="color: var(--text-link); text-decoration: none; font-size: 14px; font-weight: 500;">${escapeHtml(msg.content)} (ダウンロード)</a>
+            </div>
+          `;
+        }
+      }
+
+      item.innerHTML = `
+        <img class="message-avatar" src="${senderAvatar}" alt="Avatar">
+        <div class="message-content-wrapper">
+          <div class="message-meta">
+            <span class="message-sender">${escapeHtml(msg.senderName)}</span>
+            <span class="message-timestamp">${timeStr}</span>
+          </div>
+          <div class="message-text">${escapeHtml(msg.content)}</div>
+          ${attachmentHtml}
+        </div>
+        <div class="message-options">
+          ${deleteBtn}
+        </div>
+      `;
+
+      messagesList.appendChild(item);
+      lucide.createIcons();
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('message-input');
+      const content = input.value.trim();
+      if (!content || !currentChannelId) return;
+
+      const messageData = {
+        content: content,
+        senderId: currentUser.uid,
+        senderName: currentUser.profile.display_name,
+        avatarUrl: currentUser.profile.avatar_url,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      };
+
+      db.ref('/messages/' + (currentChannelId)).push(messageData)
+        .then(() => {
+          input.value = '';
+          stopTyping();
+        })
+        .catch(err => console.error('Failed to post message:', err));
+    }
+
+    function deleteMessage(msgId) {
+      if (confirm('このメッセージを削除しますか？')) {
+        db.ref('/messages/' + (currentChannelId) + '/' + (msgId)).remove()
+          .then(() => {
+            const el = document.getElementById('msg-' + (msgId));
+            if (el) el.remove();
+          });
+      }
+    }
+
+    // --- Typing Indicators Status ---
+    
+    function sendTypingStatus() {
+      if (!currentChannelId) return;
+      
+      db.ref('/typing/' + (currentChannelId) + '/' + (currentUser.uid)).set({
+        name: currentUser.profile.display_name
+      });
+
+      if (typingTimeout) clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(stopTyping, 3000); // Reset status after 3s idle
+    }
+
+    function stopTyping() {
+      if (!currentChannelId) return;
+      db.ref('/typing/' + (currentChannelId) + '/' + (currentUser.uid)).remove();
+    }
+
+    function listenForTyping(channelId) {
+      if (activeListeners['typing']) {
+        activeListeners['typing'].off();
+      }
+
+      const typingRef = db.ref('/typing/' + (channelId));
+      activeListeners['typing'] = typingRef;
+
+      typingRef.on('value', (snap) => {
+        const typers = [];
+        snap.forEach(child => {
+          if (child.key !== currentUser.uid) {
+            typers.push(child.val().name);
+          }
+        });
+
+        const container = document.getElementById('typing-indicators');
+        if (typers.length > 0) {
+          container.innerText = (typers.join(', ')) + ' が入力中...';
+        } else {
+          container.innerText = '';
+        }
+      });
+    }
+
+    // --- Servers Members Sidebar ---
+    
+    async function loadServerMembers(serverId) {
+      if (!supabaseClient) return;
+      const { data: memberships, error } = await supabaseClient
+        .from('members')
+        .select('role, profiles(*)')
+        .eq('server_id', serverId);
+
+      if (error) {
+        console.error('Error fetching members:', error);
+        return;
+      }
+
+      const onlineContainer = document.getElementById('members-list-online');
+      const offlineContainer = document.getElementById('members-list-offline');
+      
+      onlineContainer.innerHTML = '';
+      offlineContainer.innerHTML = '';
+
+      let onlineCount = 0;
+      let offlineCount = 0;
+
+      for (let member of memberships) {
+        const profile = member.profiles;
+        if (!profile) continue;
+
+        // Fetch presence state from Firebase RTDB
+        const presenceSnap = await db.ref('/presence/' + (profile.id)).once('value');
+        const status = presenceSnap.val() || 'offline';
+
+        const item = document.createElement('div');
+        item.className = 'member-item ' + (status === 'online' ? 'online' : 'offline');
+        
+        const defaultAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=' + (profile.id);
+        const avatarUrl = profile.avatar_url || defaultAvatar;
+
+        item.innerHTML = '\n          <div class="avatar-wrapper">\n            <img class="user-avatar" src="' + (avatarUrl) + '" alt="Member">\n            <div class="status-dot status-' + (status) + '"></div>\n          </div>\n          <span class="member-name">' + (escapeHtml(profile.display_name)) + '</span>\n        ';
+
+        if (status === 'online') {
+          onlineContainer.appendChild(item);
+          onlineCount++;
+        } else {
+          offlineContainer.appendChild(item);
+          offlineCount++;
+        }
+      }
+
+      document.getElementById('online-count-title').innerText = 'オンライン — ' + (onlineCount);
+      document.getElementById('offline-count-title').innerText = 'オフライン — ' + (offlineCount);
+    }
+
+    // --- WebRTC Multi-user Mesh Voice Engine ---
+
+    async function joinVoiceChannel(channelId) {
+      // If already connected, disconnect first
+      if (activeVoiceRoomId) {
+        if (activeVoiceRoomId === channelId) return; // Already here
+        disconnectVoiceChannel();
+      }
+
+      activeVoiceRoomId = channelId;
+      
+      const channel = currentChannels.find(c => c.id === channelId);
+      document.getElementById('active-voice-channel-name').innerText = '/ ' + (channel ? channel.name : '一般');
+      document.getElementById('voice-connection-panel').style.display = 'flex';
+
+      try {
+        // 1. Capture microphone stream
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        
+        // 2. Render voice state of local user in channel list
+        db.ref('/voice_rooms/' + (channelId) + '/' + (currentUser.uid)).set({
+          name: currentUser.profile.display_name,
+          avatarUrl: currentUser.profile.avatar_url,
+          isMuted: isMuted,
+          isSpeaking: false
+        });
+
+        // 3. Monitor active members and initialize signaling connections
+        const roomRef = db.ref('/voice_rooms/' + (channelId));
+        roomRef.on('value', async (snap) => {
+          const members = snap.val() || {};
+          
+          // Clear active user container under the voice channel
+          updateVoiceRoomUsersUI(channelId, members);
+          
+          // Initialize connections to newly discovered users
+          for (let peerId in members) {
+            if (peerId !== currentUser.uid && !peerConnections[peerId]) {
+              // Create peer node
+              initiatePeerConnection(peerId, true); // Initiate connection
+            }
+          }
+
+          // Clean up disconnected members
+          for (let peerId in peerConnections) {
+            if (!members[peerId]) {
+              closePeerConnection(peerId);
+            }
+          }
+        });
+
+        // 4. Setup listeners for signaling SDP/ICE parameters
+        listenForSignaling(channelId);
+
+        // 5. Initialize speech activity detection indicator
+        startSpeechDetection();
+        
+      } catch (err) {
+        console.error('Audio interface capture failed:', err);
+        alert('マイクの使用権限が拒否されたか、マイクが見つかりません。音声通話に参加できません。');
+        disconnectVoiceChannel();
+      }
+    }
+
+    function updateVoiceRoomUsersUI(channelId, members) {
+      const container = document.getElementById('voice-users-' + (channelId));
+      if (!container) return;
+      
+      container.innerHTML = '';
+      for (let uid in members) {
+        const user = members[uid];
+        const userDiv = document.createElement('div');
+        userDiv.className = 'voice-user';
+        userDiv.id = 'voice-user-' + (uid);
+        
+        const defaultAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=' + (uid);
+        const speakingClass = user.isSpeaking ? 'speaking-indicator' : '';
+
+        userDiv.innerHTML = '\n          <img src="' + (user.avatarUrl || defaultAvatar) + '" class="' + (speakingClass) + '" alt="User">\n          <span class="voice-user-name">' + (escapeHtml(user.name)) + '</span>\n          ' + (user.isMuted ? '<i data-lucide="mic-off" style="width: 12px; height: 12px; color: var(--red);"></i>' : '') + '\n        ';
+        container.appendChild(userDiv);
+      }
+      lucide.createIcons();
+    }
+
+    // Configures signaling channels inside Firebase database
+    function listenForSignaling(channelId) {
+      // Listen for Incoming Connection Offers
+      const offersRef = db.ref('/voice_signaling/' + (channelId) + '/offers/' + (currentUser.uid));
+      offersRef.on('child_added', async (snap) => {
+        const signal = snap.val();
+        const peerId = signal.senderId;
+
+        if (!peerConnections[peerId]) {
+          initiatePeerConnection(peerId, false);
+        }
+
+        const pc = peerConnections[peerId];
+        await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        // Send Answer back to Peer
+        db.ref('/voice_signaling/' + (channelId) + '/answers/' + (peerId) + '/' + (currentUser.uid)).set({
+          senderId: currentUser.uid,
+          sdp: answer
+        });
+      });
+
+      // Listen for Incoming Answers
+      const answersRef = db.ref('/voice_signaling/' + (channelId) + '/answers/' + (currentUser.uid));
+      answersRef.on('child_added', async (snap) => {
+        const signal = snap.val();
+        const peerId = signal.senderId;
+        const pc = peerConnections[peerId];
+        if (pc) {
+          await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        }
+      });
+
+      // Listen for Incoming ICE Candidates
+      const iceRef = db.ref('/voice_signaling/' + (channelId) + '/ice/' + (currentUser.uid));
+      iceRef.on('child_added', async (snap) => {
+        const data = snap.val();
+        const peerId = data.senderId;
+        const pc = peerConnections[peerId];
+        if (pc) {
+          await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+      });
+    }
+
+    // Creates dynamic P2P connections inside mesh voice network
+    function initiatePeerConnection(peerId, isCaller) {
+      const configuration = {
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      };
+
+      const pc = new RTCPeerConnection(configuration);
+      peerConnections[peerId] = pc;
+
+      // Add local microphone audio track to connection
+      localStream.getTracks().forEach(track => {
+        pc.addTrack(track, localStream);
+      });
+
+      // Listen for remote audio track and play
+      pc.ontrack = (event) => {
+        let audioEl = document.getElementById('audio-' + (peerId));
+        if (!audioEl) {
+          audioEl = document.createElement('audio');
+          audioEl.id = 'audio-' + (peerId);
+          audioEl.autoplay = true;
+          document.getElementById('remote-audio-container').appendChild(audioEl);
+        }
+        audioEl.srcObject = event.streams[0];
+        audioEl.muted = isDeafened; // Mute if deafened locally
+      };
+
+      // Gather connection routing ICE candidates
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          db.ref('/voice_signaling/' + (activeVoiceRoomId) + '/ice/' + (peerId)).push({
+            senderId: currentUser.uid,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      // If caller, prepare connection configuration offer
+      if (isCaller) {
+        pc.onnegotiationneeded = async () => {
+          try {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            db.ref('/voice_signaling/' + (activeVoiceRoomId) + '/offers/' + (peerId)).push({
+              senderId: currentUser.uid,
+              sdp: offer
+            });
+          } catch (err) {
+            console.error('Error creating offer:', err);
+          }
+        };
+      }
+    }
+
+    function closePeerConnection(peerId) {
+      if (peerConnections[peerId]) {
+        peerConnections[peerId].close();
+        delete peerConnections[peerId];
+      }
+      const audioEl = document.getElementById('audio-' + (peerId));
+      if (audioEl) audioEl.remove();
+    }
+
+    function disconnectVoiceChannel() {
+      if (!activeVoiceRoomId) return;
+
+      // Remove database registers
+      db.ref('/voice_rooms/' + (activeVoiceRoomId) + '/' + (currentUser.uid)).remove();
+      db.ref('/voice_signaling/' + (activeVoiceRoomId) + '/offers/' + (currentUser.uid)).remove();
+      db.ref('/voice_signaling/' + (activeVoiceRoomId) + '/answers/' + (currentUser.uid)).remove();
+      db.ref('/voice_signaling/' + (activeVoiceRoomId) + '/ice/' + (currentUser.uid)).remove();
+
+      // Clean signal paths
+      db.ref('/voice_rooms/' + (activeVoiceRoomId)).off();
+      db.ref('/voice_signaling/' + (activeVoiceRoomId) + '/offers/' + (currentUser.uid)).off();
+      db.ref('/voice_signaling/' + (activeVoiceRoomId) + '/answers/' + (currentUser.uid)).off();
+      db.ref('/voice_signaling/' + (activeVoiceRoomId) + '/ice/' + (currentUser.uid)).off();
+
+      // Close all connection links
+      for (let peerId in peerConnections) {
+        closePeerConnection(peerId);
+      }
+      peerConnections = {};
+
+      // Release microphone hardware
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+
+      // Cleanup local speech analyzers
+      if (voiceInterval) clearInterval(voiceInterval);
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+
+      // Hide Connection status widget
+      const oldRoomId = activeVoiceRoomId;
+      activeVoiceRoomId = null;
+      document.getElementById('voice-connection-panel').style.display = 'none';
+
+      // Clear users lists under voice channels
+      const container = document.getElementById('voice-users-' + (oldRoomId));
+      if (container) container.innerHTML = '';
+    }
+
+    // Toggle local mic active status
+    function toggleMute() {
+      isMuted = !isMuted;
+      
+      const muteBtn = document.getElementById('btn-voice-mute');
+      if (isMuted) {
+        muteBtn.classList.add('active');
+        muteBtn.innerHTML = '<i data-lucide="mic-off"></i>';
+      } else {
+        muteBtn.classList.remove('active');
+        muteBtn.innerHTML = '<i data-lucide="mic"></i>';
+      }
+      lucide.createIcons();
+
+      // Disable local track streaming
+      if (localStream) {
+        localStream.getAudioTracks().forEach(track => {
+          track.enabled = !isMuted;
+        });
+      }
+
+      // Synchronize state with Firebase RTDB
+      if (activeVoiceRoomId) {
+        db.ref('/voice_rooms/' + (activeVoiceRoomId) + '/' + (currentUser.uid) + '/isMuted').set(isMuted);
+      }
+    }
+
+    // Toggle listening audio feeds
+    function toggleDeafen() {
+      isDeafened = !isDeafened;
+      
+      const deafBtn = document.getElementById('btn-voice-deafen');
+      if (isDeafened) {
+        deafBtn.classList.add('active');
+        deafBtn.innerHTML = '<i data-lucide="volume-x"></i>';
+        
+        // Mute micro alongside deafen
+        if (!isMuted) toggleMute();
+      } else {
+        deafBtn.classList.remove('active');
+        deafBtn.innerHTML = '<i data-lucide="headphones"></i>';
+        
+        // Restore micro
+        if (isMuted) toggleMute();
+      }
+      lucide.createIcons();
+
+      // Mute/Unmute all incoming audio elements
+      const audios = document.querySelectorAll('#remote-audio-container audio');
+      audios.forEach(audio => {
+        audio.muted = isDeafened;
+      });
+    }
+
+    // Detects voice audio fluctuations to display green avatar borders
+    function startSpeechDetection() {
+      if (!localStream) return;
+
+      try {
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(localStream);
+        speechAnalyser = audioContext.createAnalyser();
+        speechAnalyser.fftSize = 512;
+        source.connect(speechAnalyser);
+
+        const dataArray = new Uint8Array(speechAnalyser.frequencyBinCount);
+        let speaking = false;
+
+        voiceInterval = setInterval(() => {
+          if (isMuted) {
+            if (speaking) {
+              speaking = false;
+              db.ref('/voice_rooms/' + (activeVoiceRoomId) + '/' + (currentUser.uid) + '/isSpeaking').set(false);
+            }
+            return;
+          }
+
+          speechAnalyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / dataArray.length;
+
+          // Threshold indicating speaking volume
+          const isSpeakingNow = average > 12;
+
+          if (isSpeakingNow !== speaking) {
+            speaking = isSpeakingNow;
+            db.ref('/voice_rooms/' + (activeVoiceRoomId) + '/' + (currentUser.uid) + '/isSpeaking').set(speaking);
+          }
+        }, 150);
+
+      } catch (err) {
+        console.warn('Speech analyzer initialization failed:', err);
+      }
+    }
+
+    // Safe String Escaping to prevent HTML/XSS injection vulnerabilities
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+    }
+  </script>
 </body>
 </html>
