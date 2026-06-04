@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>マイク録音・GAS送信アプリ</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; text-align: center; }
+        button { font-size: 1.2rem; padding: 10px 20px; margin: 10px; cursor: pointer; }
+        #status { margin-top: 20px; color: #555; }
+    </style>
+</head>
+<body>
+
+    <h1>マイク録音テスト</h1>
+    <button id="startBtn">録音開始</button>
+    <button id="stopBtn" disabled>録音停止・送信</button>
+    
+    <div id="status">ボタンを押して録音を開始してください。</div>
+
+    <script>
+        // ⚠️ あなたのGASの「ウェブアプリURL」に書き換えてください
+        const GAS_WEBAPP_URL = "https://script.google.com/macros/s/XXXXX/exec";
+
+        let mediaRecorder;
+        let audioChunks = [];
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDiv = document.getElementById('status');
+
+        // 録音開始
+        startBtn.addEventListener('click', async () => {
+            try {
+                // 🛠️ GAS外なので、ここで確実にマイク許可ダイアログが出ます
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    statusDiv.innerText = "GASへ音声を送信中...";
+                    
+                    // BlobをBase64に変換してGASに送る
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = async () => {
+                        const base64Audio = reader.result.split(',')[1];
+                        await sendToGAS(base64Audio);
+                    };
+                };
+
+                mediaRecorder.start();
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                statusDiv.innerText = "録音中...";
+            } catch (err) {
+                console.error("マイクの起動に失敗:", err);
+                statusDiv.innerText = "マイクの許可が得られませんでした。";
+            }
+        });
+
+        // 録音停止
+        stopBtn.addEventListener('click', () => {
+            mediaRecorder.stop();
+            // マイクのストリームを停止して終了
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        });
+
+        // GASへのデータ送信処理
+        async function sendToGAS(base64Data) {
+            try {
+                const response = await fetch(GAS_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'cors', // 💡 クロスドメイン通信を許可
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'audio': base64Data
+                    })
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    statusDiv.innerText = "送信完了！ GAS側で正常に処理されました。";
+                } else {
+                    statusDiv.innerText = "エラー: " + result.message;
+                }
+            } catch (error) {
+                console.error("GAS送信エラー:", error);
+                statusDiv.innerText = "GASへの送信に失敗しました。";
+            }
+        }
+    </script>
+</body>
+</html>
